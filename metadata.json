@@ -1,5 +1,5 @@
 {
-  "name": "Dine & Bond",
+  "name": "Dine & Bond 1.0",
   "description": "A sophisticated social gathering app that helps guests find their tables and provides AI-generated conversation icebreakers based on their table-mates.",
   "requestFramePermissions": [
     "camera"

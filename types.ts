@@ -11,6 +11,18 @@ export interface Guest {
   quirky: string;
 }
 
+export interface EventItem {
+  time: string;
+  organizer: string;
+  title: string;
+  location: string;
+  content: string;
+  limit: string;
+  formLink: string;
+  deadline: string;
+  currentParticipants: string;
+}
+
 export interface AppState {
   isCheckingIn: boolean;
   checkedInGuest: Guest | null;
@@ -20,4 +32,5 @@ export interface AppState {
 
 export interface SheetData {
   guests: Guest[];
+  events: EventItem[];
 }

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Guest, AppState } from './types';
+import { Guest, AppState, EventItem } from './types';
 import { fetchAppDataFromSheet } from './sheetService';
 import { 
   Users, 
@@ -14,11 +14,19 @@ import {
   Dices,
   Instagram,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Calendar,
+  User,
+  Info,
+  ExternalLink,
+  Clock,
+  X
 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [allGuests, setAllGuests] = useState<Guest[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [inputIgId, setInputIgId] = useState('');
   const [state, setState] = useState<AppState>({
     isCheckingIn: false,
@@ -33,6 +41,13 @@ const App: React.FC = () => {
       try {
         const data = await fetchAppDataFromSheet();
         setAllGuests(data.guests);
+        // 排序活動：日期近到遠 (假設格式為可解析字串或 yyyy/mm/dd)
+        const sortedEvents = [...data.events].sort((a, b) => {
+          const dateA = new Date(a.time.split(' ')[0]).getTime();
+          const dateB = new Date(b.time.split(' ')[0]).getTime();
+          return dateA - dateB;
+        });
+        setEvents(sortedEvents);
       } catch (err) {
         console.error(err);
       } finally {
@@ -82,6 +97,104 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const EventModal = ({ event, onClose }: { event: EventItem, onClose: () => void }) => (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div 
+        className="bg-white w-full max-w-md h-[90vh] sm:h-auto sm:max-h-[85vh] rounded-t-[2.5rem] sm:rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 duration-500"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative p-8 pb-4 flex justify-between items-start">
+          <div className="space-y-1">
+            <p className="text-amber-600 text-[10px] font-black tracking-widest uppercase">Event Details</p>
+            <h2 className="text-2xl font-black text-stone-800 leading-tight">{event.title}</h2>
+          </div>
+          <button onClick={onClose} className="p-2 bg-stone-50 rounded-full hover:bg-stone-100 transition-colors">
+            <X className="w-5 h-5 text-stone-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-8 pb-10 space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+             <div className="bg-stone-50 p-4 rounded-2xl space-y-1">
+                <div className="flex items-center gap-1.5 text-stone-400">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">時間</span>
+                </div>
+                <p className="text-xs font-bold text-stone-800">{event.time}</p>
+             </div>
+             <div className="bg-stone-50 p-4 rounded-2xl space-y-1">
+                <div className="flex items-center gap-1.5 text-stone-400">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">主辦人</span>
+                </div>
+                <p className="text-xs font-bold text-stone-800">{event.organizer}</p>
+             </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="bg-amber-50 text-amber-600 p-2.5 rounded-xl">
+                <MapPin className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">地點</h4>
+                <p className="text-sm font-bold text-stone-800 leading-relaxed">{event.location}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="bg-stone-100 text-stone-600 p-2.5 rounded-xl">
+                <Info className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">內容</h4>
+                <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{event.content}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="bg-emerald-50 text-emerald-600 p-2.5 rounded-xl">
+                <Users className="w-4 h-4" />
+              </div>
+              <div className="grid grid-cols-2 gap-8 flex-1">
+                <div>
+                  <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">人數限制</h4>
+                  <p className="text-sm font-bold text-stone-800">{event.limit} 人</p>
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">目前參加</h4>
+                  <p className="text-sm font-bold text-stone-800">{event.currentParticipants} 人</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="bg-rose-50 text-rose-600 p-2.5 rounded-xl">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">報名截止</h4>
+                <p className="text-sm font-bold text-rose-600 leading-relaxed">{event.deadline}</p>
+              </div>
+            </div>
+          </div>
+
+          {event.formLink && (
+            <a 
+              href={event.formLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-5 bg-stone-900 text-white rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl shadow-stone-900/20 active:scale-95 transition-all"
+            >
+              前往報名表單
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-[#fcfaf7] px-8 text-center">
@@ -92,7 +205,7 @@ const App: React.FC = () => {
         </div>
         <h3 className="text-stone-800 font-black text-xl mb-3 tracking-tight italic">Dine & Bond</h3>
         <p className="text-stone-500 text-sm font-medium leading-relaxed max-w-[200px]">
-          正在同步試算表最新資訊...
+          正在同步最新聚會資訊...
         </p>
       </div>
     );
@@ -121,15 +234,15 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 px-5 pb-20 z-10 space-y-8">
+      <main className="flex-1 px-5 pb-20 z-10 space-y-12">
         {!state.checkedInGuest ? (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out">
+          <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out space-y-12">
             <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white/50 space-y-8">
               <div className="text-center space-y-3">
                 <h2 className="text-2xl font-black text-stone-800 tracking-tight italic font-serif">Greetings,</h2>
                 <div className="space-y-1">
                   <p className="text-stone-500 text-sm font-medium">請輸入您的 Instagram ID</p>
-                  <p className="text-amber-600/70 text-xs font-bold tracking-tight">若沒有可輸入 Line ID</p>
+                  <p className="text-amber-600/70 text-xs font-bold tracking-tight">領取今晚的配對資訊</p>
                 </div>
               </div>
 
@@ -169,10 +282,42 @@ const App: React.FC = () => {
                 )}
               </button>
             </div>
+
+            {/* 近期聚會資訊 */}
+            <section className="space-y-6">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-stone-400" />
+                  <h3 className="font-black text-stone-500 uppercase tracking-[0.2em] text-[10px]">近期聚會資訊</h3>
+                </div>
+                <div className="w-8 h-[1px] bg-stone-200"></div>
+              </div>
+
+              <div className="grid gap-4">
+                {events.map((event, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => setSelectedEvent(event)}
+                    className="bg-white/60 p-5 rounded-[1.8rem] border border-white border-opacity-50 shadow-sm flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer hover:bg-white"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">{event.time.split(' ')[0]}</p>
+                      <h4 className="text-base font-black text-stone-800 tracking-tight leading-tight">{event.title}</h4>
+                    </div>
+                    <div className="bg-stone-50 p-2.5 rounded-full group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
+                      <ChevronRight className="w-4 h-4 text-stone-300 group-hover:text-amber-600" />
+                    </div>
+                  </div>
+                ))}
+                {events.length === 0 && (
+                  <p className="text-center text-xs text-stone-400 italic py-4">目前尚無活動資訊</p>
+                )}
+              </div>
+            </section>
             
-            <div className="mt-12 text-center opacity-30 select-none">
+            <div className="text-center opacity-30 select-none pb-10">
               <Sparkles className="w-6 h-6 mx-auto mb-2" />
-              <p className="text-[10px] font-black tracking-[0.2em] uppercase">Private Event Only</p>
+              <p className="text-[10px] font-black tracking-[0.2em] uppercase">Private Event Collective</p>
             </div>
           </div>
         ) : (
@@ -292,6 +437,14 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* 活動詳情彈窗 */}
+      {selectedEvent && (
+        <EventModal 
+          event={selectedEvent} 
+          onClose={() => setSelectedEvent(null)} 
+        />
+      )}
 
       <footer className="p-10 text-center flex flex-col items-center gap-8 z-10">
         <a 
